@@ -26,8 +26,8 @@
             background-color: #475569;
         }
         .goal {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fbbf24' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2l4 4-4 4-4-4 4-4zM2 12l4 4-4 4-4-4 4-4zM12 22l4-4-4-4-4 4 4 4zM22 12l-4 4-4-4 4-4 4 4z'/%3E%3C/svg%3E");
-            background-size: 70%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z'/%3E%3Cline x1='4' y1='22' x2='4' y2='15'/%3E%3C/svg%3E");
+            background-size: 80%;
             background-repeat: no-repeat;
             background-position: center;
         }
@@ -61,7 +61,10 @@
     <div class="w-full max-w-7xl mx-auto">
         <header class="text-center mb-6">
             <h1 class="text-3xl md:text-4xl font-bold text-slate-700">プログラミング迷路ゲーム</h1>
-            <p id="level-title" class="text-lg text-slate-500 mt-1">ステージ 1: まずはゴールまで動かしてみよう！</p>
+            <div class="flex justify-center items-center gap-4 mt-2">
+                <p id="level-title" class="text-lg text-slate-500"></p>
+                <select id="stage-select" class="bg-white border border-slate-300 rounded-md py-1 px-2 text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"></select>
+            </div>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -77,10 +80,15 @@
             <div class="flex flex-col gap-4">
                 <div class="bg-white p-4 rounded-xl shadow-lg">
                     <h2 class="text-xl font-semibold mb-3 border-b pb-2">コマンドを選ぼう</h2>
-                    <div id="block-palette" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div id="block-palette" class="flex flex-wrap gap-3">
                         <div class="command-block bg-blue-500 text-white p-3 rounded-lg text-center font-semibold shadow" data-command="forward">まえに すすむ</div>
                         <div class="command-block bg-green-500 text-white p-3 rounded-lg text-center font-semibold shadow" data-command="turnRight">みぎを むく</div>
                         <div class="command-block bg-orange-500 text-white p-3 rounded-lg text-center font-semibold shadow" data-command="turnLeft">ひだりを むく</div>
+                        <div class="command-block bg-purple-500 text-white p-2 rounded-lg text-center font-semibold shadow flex items-center gap-2" data-command="loopStart">
+                            <input type="number" min="1" max="10" value="2" class="w-12 text-black text-center rounded" onclick="event.stopPropagation()">
+                             かい くりかえす
+                        </div>
+                        <div class="command-block bg-purple-500 text-white p-3 rounded-lg text-center font-semibold shadow" data-command="loopEnd">ここまで</div>
                     </div>
                 </div>
 
@@ -138,7 +146,7 @@
                 ],
                 start: { x: 1, y: 1, dir: 'right' }
             },
-             {
+            {
                 title: "ステージ 2: まがり角が多いぞ！",
                 grid: [
                     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -153,6 +161,22 @@
                     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                 ],
                 start: { x: 1, y: 1, dir: 'down' }
+            },
+            {
+                title: "ステージ 3: くりかえしで長い道を進もう！",
+                grid: [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                ],
+                start: { x: 1, y: 1, dir: 'right' }
             }
         ];
 
@@ -163,14 +187,27 @@
         const gameBoard = document.getElementById('game-board');
         const playerElement = document.getElementById('player');
         const workspace = document.getElementById('workspace');
+        const stageSelect = document.getElementById('stage-select');
 
         const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+        function populateStageSelector() {
+            stageSelect.innerHTML = '';
+            levels.forEach((level, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `ステージ ${index + 1}`;
+                stageSelect.appendChild(option);
+            });
+        }
+
         function loadLevel(levelIndex) {
+            currentLevelIndex = levelIndex;
             const level = levels[levelIndex];
             if (!level) return;
             
             document.getElementById('level-title').textContent = level.title;
+            stageSelect.value = levelIndex;
             player = { ...level.start };
             
             renderBoard();
@@ -193,6 +230,7 @@
         }
         
         function renderPlayer() {
+            if (!gameBoard.offsetWidth) return;
             const boardSize = gameBoard.offsetWidth;
             const tileSize = boardSize / 10;
             playerElement.style.left = `${player.x * tileSize}px`;
@@ -205,12 +243,20 @@
             playerElement.style.transform = `rotate(${rotation}deg)`;
         }
 
-        function addCommandToWorkspace(command) {
+        function addCommandToWorkspace(command, sourceElement) {
             const block = document.createElement('div');
-            block.textContent = getCommandText(command);
-            block.className = `command-block p-2 rounded-md text-white font-medium text-sm ${getCommandColor(command)}`;
             block.dataset.command = command;
 
+            if (command === 'loopStart') {
+                const input = sourceElement.querySelector('input');
+                const count = input ? input.value : '2';
+                block.dataset.count = count;
+                block.textContent = `${count} かい くりかえす`;
+            } else {
+                block.textContent = getCommandText(command);
+            }
+            
+            block.className = `command-block p-2 rounded-md text-white font-medium text-sm ${getCommandColor(command)}`;
             block.addEventListener('click', () => {
                 workspace.removeChild(block);
             });
@@ -222,6 +268,8 @@
                 case 'forward': return 'まえに すすむ';
                 case 'turnRight': return 'みぎを むく';
                 case 'turnLeft': return 'ひだりを むく';
+                case 'loopStart': return 'くりかえす';
+                case 'loopEnd': return 'ここまで';
                 default: return '';
             }
         }
@@ -231,51 +279,83 @@
                 case 'forward': return 'bg-blue-500';
                 case 'turnRight': return 'bg-green-500';
                 case 'turnLeft': return 'bg-orange-500';
+                case 'loopStart':
+                case 'loopEnd': return 'bg-purple-500';
                 default: return 'bg-gray-400';
             }
         }
 
         async function runCommands() {
-            if(isRunning) return;
+            if (isRunning) return;
             isRunning = true;
             toggleButtons(false);
 
-            const commands = Array.from(workspace.children).map(block => block.dataset.command);
-            
-            for (const command of commands) {
-                if (!isRunning) break; 
-                switch(command) {
-                    case 'forward':
-                        moveForward();
-                        break;
-                    case 'turnRight':
-                        turnRight();
-                        break;
-                    case 'turnLeft':
-                        turnLeft();
-                        break;
-                }
-                renderPlayer();
+            const commandElements = Array.from(workspace.children);
 
-                const grid = levels[currentLevelIndex].grid;
-                if (grid[player.y][player.x] === 2) {
-                    await sleep(300);
-                    showModal('クリア！', 'おめでとう！ゴールにたどり着いたね。', () => {
-                        currentLevelIndex++;
-                        if (currentLevelIndex >= levels.length) {
-                             showModal('全ステージクリア！', 'すごい！すべてのステージをクリアしたね！', () => {
-                                 currentLevelIndex = 0;
-                                 loadLevel(currentLevelIndex);
-                             });
-                        } else {
-                            loadLevel(currentLevelIndex);
-                        }
-                    });
-                    resetRunState();
-                    return;
+            const findMatchingEnd = (startIndex) => {
+                let nestingLevel = 1;
+                for (let i = startIndex + 1; i < commandElements.length; i++) {
+                    const cmd = commandElements[i].dataset.command;
+                    if (cmd === 'loopStart') nestingLevel++;
+                    if (cmd === 'loopEnd') nestingLevel--;
+                    if (nestingLevel === 0) return i;
                 }
-                await sleep(400);
-            }
+                return -1;
+            };
+
+            const execute = async (startIndex, endIndex) => {
+                for (let i = startIndex; i < endIndex; i++) {
+                    if (!isRunning) return false;
+
+                    const element = commandElements[i];
+                    const command = element.dataset.command;
+
+                    if (command === 'loopStart') {
+                        const loopCount = parseInt(element.dataset.count, 10) || 0;
+                        const endLoopIndex = findMatchingEnd(i);
+                        
+                        if (endLoopIndex !== -1 && endLoopIndex < endIndex) {
+                            for (let k = 0; k < loopCount; k++) {
+                                if (!isRunning) break;
+                                const goalReached = await execute(i + 1, endLoopIndex);
+                                if (goalReached) return true;
+                            }
+                            i = endLoopIndex;
+                        } else {
+                            console.error("Mismatched loop blocks!");
+                            break; 
+                        }
+                    } else if (command !== 'loopEnd') {
+                        switch(command) {
+                            case 'forward': moveForward(); break;
+                            case 'turnRight': turnRight(); break;
+                            case 'turnLeft': turnLeft(); break;
+                        }
+                        renderPlayer();
+
+                        const grid = levels[currentLevelIndex].grid;
+                        if (grid[player.y][player.x] === 2) {
+                            await sleep(300);
+                            showModal('クリア！', 'おめでとう！ゴールにたどり着いたね。', () => {
+                                currentLevelIndex++;
+                                if (currentLevelIndex >= levels.length) {
+                                    showModal('全ステージクリア！', 'すごい！すべてのステージをクリアしたね！', () => {
+                                        currentLevelIndex = 0;
+                                        loadLevel(currentLevelIndex);
+                                    });
+                                } else {
+                                    loadLevel(currentLevelIndex);
+                                }
+                            });
+                            return true;
+                        }
+                        await sleep(400);
+                    }
+                }
+                return false;
+            };
+
+            await execute(0, commandElements.length);
             resetRunState();
         }
         
@@ -361,19 +441,25 @@
         }
 
         document.querySelectorAll('#block-palette .command-block').forEach(block => {
-            block.addEventListener('click', () => {
+            block.addEventListener('click', (e) => {
                 if (!isRunning) {
-                    addCommandToWorkspace(block.dataset.command);
+                    addCommandToWorkspace(block.dataset.command, e.currentTarget);
                 }
             });
         });
         
+        stageSelect.addEventListener('change', (e) => {
+            const selectedIndex = parseInt(e.target.value, 10);
+            loadLevel(selectedIndex);
+        });
+
         document.getElementById('run-button').addEventListener('click', runCommands);
         document.getElementById('reset-button').addEventListener('click', resetGame);
         document.getElementById('clear-button').addEventListener('click', resetWorkspace);
         
         window.addEventListener('resize', renderPlayer);
 
+        populateStageSelector();
         loadLevel(currentLevelIndex);
         setTimeout(renderPlayer, 100);
     });
