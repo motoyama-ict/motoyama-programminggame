@@ -21,6 +21,7 @@
         .tile {
             width: 100%;
             height: 100%;
+            box-shadow: inset 0 0 0 1px #e2e8f0; /* グリッド線を追加 */
         }
         .wall {
             background-color: #475569;
@@ -53,6 +54,11 @@
         }
         #workspace .command-block {
              cursor: grab;
+        }
+        .executing {
+            outline: 3px solid #facc15; /* yellow-400 */
+            outline-offset: 2px;
+            border-radius: 6px; /* Match the block's rounding */
         }
     </style>
 </head>
@@ -131,7 +137,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const levels = [
             {
-                title: "ステージ 1: まずはゴールまで動かしてみよう！",
+                title: "ステージ 1: まずはゴール🚩まで動かしてみよう！",
                 grid: [
                     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                     [1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
@@ -326,6 +332,8 @@
                             break; 
                         }
                     } else if (command !== 'loopEnd') {
+                        element.classList.add('executing');
+
                         switch(command) {
                             case 'forward': moveForward(); break;
                             case 'turnRight': turnRight(); break;
@@ -336,6 +344,7 @@
                         const grid = levels[currentLevelIndex].grid;
                         if (grid[player.y][player.x] === 2) {
                             await sleep(300);
+                            commandElements.forEach(el => el.classList.remove('executing')); // Clean up highlights
                             showModal('クリア！', 'おめでとう！ゴールにたどり着いたね。', () => {
                                 currentLevelIndex++;
                                 if (currentLevelIndex >= levels.length) {
@@ -350,6 +359,7 @@
                             return true;
                         }
                         await sleep(400);
+                        element.classList.remove('executing');
                     }
                 }
                 return false;
@@ -393,6 +403,7 @@
             if(isRunning) {
                 isRunning = false;
             }
+            document.querySelectorAll('#workspace .executing').forEach(el => el.classList.remove('executing'));
             player = { ...levels[currentLevelIndex].start };
             renderPlayer();
             toggleButtons(true);
@@ -404,6 +415,7 @@
 
         function resetRunState() {
              isRunning = false;
+             document.querySelectorAll('#workspace .executing').forEach(el => el.classList.remove('executing'));
              toggleButtons(true);
         }
 
@@ -467,5 +479,7 @@
 
 </body>
 </html>
+
+
 
 
