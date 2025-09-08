@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>プログラミング迷路ゲーム</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=M+PLUS+Rounded+1c:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'M PLUS Rounded 1c', sans-serif;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+            aspect-ratio: 1 / 1;
+            border: 2px solid #334155;
+            background-color: #f1f5f9;
+        }
+        .tile {
+            width: 100%;
+            height: 100%;
+        }
+        .wall {
+            background-color: #475569;
+        }
+        .goal {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fbbf24' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2l4 4-4 4-4-4 4-4zM2 12l4 4-4 4-4-4 4-4zM12 22l4-4-4-4-4 4 4 4zM22 12l-4 4-4-4 4-4 4 4z'/%3E%3C/svg%3E");
+            background-size: 70%;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        #player {
+            position: absolute;
+            width: calc(100% / 10);
+            height: calc(100% / 10);
+            transition: all 0.3s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem; /* 絵文字のサイズ調整 */
+        }
+        .command-block {
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .command-block:hover {
+            transform: scale(1.05);
+        }
+        .command-block:active {
+            transform: scale(0.98);
+        }
+        #workspace .command-block {
+             cursor: grab;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex flex-col items-center justify-center min-h-screen p-4 md:p-8">
+
+    <div class="w-full max-w-7xl mx-auto">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-700">プログラミング迷路ゲーム</h1>
+            <p id="level-title" class="text-lg text-slate-500 mt-1">ステージ 1: まずはゴールまで動かしてみよう！</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- ゲーム画面 -->
+            <div class="bg-white p-4 rounded-xl shadow-lg">
+                <div id="game-container" class="relative">
+                    <div id="game-board" class="game-board rounded-lg overflow-hidden"></div>
+                    <div id="player">🤖</div>
+                </div>
+            </div>
+
+            <!-- 操作パネル -->
+            <div class="flex flex-col gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-semibold mb-3 border-b pb-2">コマンドを選ぼう</h2>
+                    <div id="block-palette" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div class="command-block bg-blue-500 text-white p-3 rounded-lg text-center font-semibold shadow" data-command="forward">まえに すすむ</div>
+                        <div class="command-block bg-green-500 text-white p-3 rounded-lg text-center font-semibold shadow" data-command="turnRight">みぎを むく</div>
+                        <div class="command-block bg-orange-500 text-white p-3 rounded-lg text-center font-semibold shadow" data-command="turnLeft">ひだりを むく</div>
+                    </div>
+                </div>
+
+                <div id="action-buttons" class="grid grid-cols-3 gap-4">
+                     <button id="run-button" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                        じっこう
+                    </button>
+                    <button id="reset-button" class="bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                        リセット
+                    </button>
+                    <button id="clear-button" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                        プログラムをクリア
+                    </button>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-lg flex-grow min-h-[200px] flex flex-col">
+                    <h2 class="text-xl font-semibold mb-3 border-b pb-2">プログラムを作ろう</h2>
+                    <div id="workspace" class="bg-slate-100 flex-grow rounded-md p-2 space-y-2 overflow-y-auto">
+                        <!-- ここにコマンドブロックが追加される -->
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    
+    <!-- メッセージモーダル -->
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div id="modal-content" class="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-sm w-full">
+            <h2 id="modal-title" class="text-3xl font-bold mb-4"></h2>
+            <p id="modal-message" class="text-slate-600 mb-6"></p>
+            <button id="modal-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
+                OK
+            </button>
+        </div>
+    </div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const levels = [
+            {
+                title: "ステージ 1: まずはゴールまで動かしてみよう！",
+                grid: [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+                    [1, 0, 1, 0, 1, 0, 1, 1, 0, 1],
+                    [1, 0, 1, 0, 0, 0, 0, 1, 0, 1],
+                    [1, 0, 1, 1, 1, 1, 0, 1, 2, 1],
+                    [1, 0, 0, 0, 0, 1, 0, 1, 0, 1],
+                    [1, 1, 1, 1, 0, 1, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+                    [1, 0, 1, 1, 1, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                ],
+                start: { x: 1, y: 1, dir: 'right' }
+            },
+             {
+                title: "ステージ 2: まがり角が多いぞ！",
+                grid: [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 1, 1, 0, 1, 1, 1, 0, 1],
+                    [1, 0, 0, 0, 0, 1, 2, 1, 0, 1],
+                    [1, 1, 1, 0, 1, 1, 0, 1, 0, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
+                    [1, 0, 1, 1, 1, 0, 1, 1, 0, 1],
+                    [1, 0, 1, 0, 0, 0, 0, 1, 0, 1],
+                    [1, 0, 1, 0, 1, 1, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                ],
+                start: { x: 1, y: 1, dir: 'down' }
+            }
+        ];
+
+        let currentLevelIndex = 0;
+        let player = {};
+        let isRunning = false;
+        
+        const gameBoard = document.getElementById('game-board');
+        const playerElement = document.getElementById('player');
+        const workspace = document.getElementById('workspace');
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        function loadLevel(levelIndex) {
+            const level = levels[levelIndex];
+            if (!level) return;
+            
+            document.getElementById('level-title').textContent = level.title;
+            player = { ...level.start };
+            
+            renderBoard();
+            renderPlayer();
+            resetWorkspace();
+        }
+
+        function renderBoard() {
+            gameBoard.innerHTML = '';
+            const grid = levels[currentLevelIndex].grid;
+            grid.forEach(row => {
+                row.forEach(tileType => {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    if (tileType === 1) tile.classList.add('wall');
+                    if (tileType === 2) tile.classList.add('goal');
+                    gameBoard.appendChild(tile);
+                });
+            });
+        }
+        
+        function renderPlayer() {
+            const boardSize = gameBoard.offsetWidth;
+            const tileSize = boardSize / 10;
+            playerElement.style.left = `${player.x * tileSize}px`;
+            playerElement.style.top = `${player.y * tileSize}px`;
+
+            let rotation = 0;
+            if (player.dir === 'right') rotation = 90;
+            if (player.dir === 'down') rotation = 180;
+            if (player.dir === 'left') rotation = 270;
+            playerElement.style.transform = `rotate(${rotation}deg)`;
+        }
+
+        function addCommandToWorkspace(command) {
+            const block = document.createElement('div');
+            block.textContent = getCommandText(command);
+            block.className = `command-block p-2 rounded-md text-white font-medium text-sm ${getCommandColor(command)}`;
+            block.dataset.command = command;
+
+            block.addEventListener('click', () => {
+                workspace.removeChild(block);
+            });
+            workspace.appendChild(block);
+        }
+        
+        function getCommandText(command) {
+            switch(command) {
+                case 'forward': return 'まえに すすむ';
+                case 'turnRight': return 'みぎを むく';
+                case 'turnLeft': return 'ひだりを むく';
+                default: return '';
+            }
+        }
+
+        function getCommandColor(command) {
+            switch(command) {
+                case 'forward': return 'bg-blue-500';
+                case 'turnRight': return 'bg-green-500';
+                case 'turnLeft': return 'bg-orange-500';
+                default: return 'bg-gray-400';
+            }
+        }
+
+        async function runCommands() {
+            if(isRunning) return;
+            isRunning = true;
+            toggleButtons(false);
+
+            const commands = Array.from(workspace.children).map(block => block.dataset.command);
+            
+            for (const command of commands) {
+                if (!isRunning) break; 
+                switch(command) {
+                    case 'forward':
+                        moveForward();
+                        break;
+                    case 'turnRight':
+                        turnRight();
+                        break;
+                    case 'turnLeft':
+                        turnLeft();
+                        break;
+                }
+                renderPlayer();
+
+                const grid = levels[currentLevelIndex].grid;
+                if (grid[player.y][player.x] === 2) {
+                    await sleep(300);
+                    showModal('クリア！', 'おめでとう！ゴールにたどり着いたね。', () => {
+                        currentLevelIndex++;
+                        if (currentLevelIndex >= levels.length) {
+                             showModal('全ステージクリア！', 'すごい！すべてのステージをクリアしたね！', () => {
+                                 currentLevelIndex = 0;
+                                 loadLevel(currentLevelIndex);
+                             });
+                        } else {
+                            loadLevel(currentLevelIndex);
+                        }
+                    });
+                    resetRunState();
+                    return;
+                }
+                await sleep(400);
+            }
+            resetRunState();
+        }
+        
+        function moveForward() {
+            let newX = player.x;
+            let newY = player.y;
+
+            if (player.dir === 'up') newY--;
+            if (player.dir === 'right') newX++;
+            if (player.dir === 'down') newY++;
+            if (player.dir === 'left') newX--;
+            
+            const grid = levels[currentLevelIndex].grid;
+            if (newX >= 0 && newX < 10 && newY >= 0 && newY < 10 && grid[newY][newX] !== 1) {
+                player.x = newX;
+                player.y = newY;
+            } else {
+                console.log("壁にぶつかった！");
+            }
+        }
+
+        function turnRight() {
+            const dirs = ['up', 'right', 'down', 'left'];
+            const currentDirIndex = dirs.indexOf(player.dir);
+            player.dir = dirs[(currentDirIndex + 1) % 4];
+        }
+
+        function turnLeft() {
+            const dirs = ['up', 'right', 'down', 'left'];
+            const currentDirIndex = dirs.indexOf(player.dir);
+            player.dir = dirs[(currentDirIndex - 1 + 4) % 4];
+        }
+        
+        function resetGame() {
+            if(isRunning) {
+                isRunning = false;
+            }
+            player = { ...levels[currentLevelIndex].start };
+            renderPlayer();
+            toggleButtons(true);
+        }
+
+        function resetWorkspace() {
+             workspace.innerHTML = '';
+        }
+
+        function resetRunState() {
+             isRunning = false;
+             toggleButtons(true);
+        }
+
+        function toggleButtons(enabled) {
+            document.getElementById('run-button').disabled = !enabled;
+            document.getElementById('reset-button').disabled = !enabled;
+            document.getElementById('clear-button').disabled = !enabled;
+            document.querySelectorAll('#block-palette .command-block').forEach(b => b.style.pointerEvents = enabled ? 'auto' : 'none');
+
+            const buttons = ['run-button', 'reset-button', 'clear-button'];
+            buttons.forEach(id => {
+                const button = document.getElementById(id);
+                if (enabled) {
+                    button.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    button.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            });
+        }
+        
+        function showModal(title, message, onConfirm) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            const modal = document.getElementById('modal');
+            modal.classList.remove('hidden');
+
+            const confirmButton = document.getElementById('modal-button');
+            const newConfirmButton = confirmButton.cloneNode(true);
+            confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
+            
+            newConfirmButton.onclick = () => {
+                modal.classList.add('hidden');
+                if (onConfirm) onConfirm();
+            };
+        }
+
+        document.querySelectorAll('#block-palette .command-block').forEach(block => {
+            block.addEventListener('click', () => {
+                if (!isRunning) {
+                    addCommandToWorkspace(block.dataset.command);
+                }
+            });
+        });
+        
+        document.getElementById('run-button').addEventListener('click', runCommands);
+        document.getElementById('reset-button').addEventListener('click', resetGame);
+        document.getElementById('clear-button').addEventListener('click', resetWorkspace);
+        
+        window.addEventListener('resize', renderPlayer);
+
+        loadLevel(currentLevelIndex);
+        setTimeout(renderPlayer, 100);
+    });
+</script>
+
+</body>
+</html>
+
+
